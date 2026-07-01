@@ -9680,6 +9680,7 @@ fn test_create_index_with_using_function() {
             predicate: None,
             index_options,
             alter_options,
+            fulltext_or_spatial: _,
         }) => {
             assert_eq!("idx_name", name.to_string());
             assert_eq!("test", table_name.to_string());
@@ -9737,6 +9738,7 @@ fn test_create_index_with_with_clause() {
             predicate: None,
             index_options,
             alter_options,
+            fulltext_or_spatial: _,
         }) => {
             pretty_assertions::assert_eq!("title_idx", name.to_string());
             pretty_assertions::assert_eq!("films", table_name.to_string());

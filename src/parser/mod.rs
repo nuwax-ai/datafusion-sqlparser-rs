@@ -5294,6 +5294,16 @@ impl<'a> Parser<'a> {
             self.parse_create_index(false).map(Into::into)
         } else if self.parse_keywords(&[Keyword::UNIQUE, Keyword::INDEX]) {
             self.parse_create_index(true).map(Into::into)
+        } else if dialect_of!(self is GenericDialect | MySqlDialect)
+            && self.parse_keywords(&[Keyword::FULLTEXT, Keyword::INDEX])
+        {
+            self.parse_create_fulltext_or_spatial_index(FullTextOrSpatialKind::Fulltext)
+                .map(Into::into)
+        } else if dialect_of!(self is GenericDialect | MySqlDialect)
+            && self.parse_keywords(&[Keyword::SPATIAL, Keyword::INDEX])
+        {
+            self.parse_create_fulltext_or_spatial_index(FullTextOrSpatialKind::Spatial)
+                .map(Into::into)
         } else if self.parse_keyword(Keyword::VIRTUAL) {
             self.parse_create_virtual_table()
         } else if self.parse_keyword(Keyword::SCHEMA) {
@@ -8314,6 +8324,71 @@ impl<'a> Parser<'a> {
             predicate,
             index_options,
             alter_options,
+            fulltext_or_spatial: None,
+        })
+    }
+
+    /// Parse a standalone MySQL `CREATE FULLTEXT INDEX` / `CREATE SPATIAL INDEX`.
+    ///
+    /// Syntax (MySQL):
+    /// ```text
+    /// CREATE [FULLTEXT | SPATIAL] INDEX [index_name] ON tbl_name (key_part,...)
+    ///        [index_option] ... [algorithm_option | lock_option] ...
+    /// ```
+    ///
+    /// Unlike `parse_create_index`, this form is MySQL-only and does not
+    /// support PG-specific clauses like `CONCURRENTLY`, `IF NOT EXISTS`,
+    /// `INCLUDE`, `NULLS DISTINCT`, `WITH (...)`, or `WHERE`.
+    ///
+    /// [MySQL]: https://dev.mysql.com/doc/refman/8.0/en/create-index.html
+    pub fn parse_create_fulltext_or_spatial_index(
+        &mut self,
+        kind: FullTextOrSpatialKind,
+    ) -> Result<CreateIndex, ParserError> {
+        // Optional index name (the `INDEX` keyword was already consumed by the dispatch).
+        let index_name = if self.parse_keyword(Keyword::ON) {
+            None
+        } else {
+            let name = self.parse_object_name(false)?;
+            self.expect_keyword_is(Keyword::ON)?;
+            Some(name)
+        };
+
+        let table_name = self.parse_object_name(false)?;
+
+        // MySQL allows `USING BTREE/HASH` after the table name.
+        let using = self.parse_optional_using_then_index_type()?;
+
+        let columns = self.parse_parenthesized_index_column_list()?;
+
+        // MySQL index options (USING after column list, WITH PARSER, visible/hidden, etc.)
+        let index_options = self.parse_index_options()?;
+
+        // MySQL allows `ALGORITHM` and `LOCK` options.
+        let mut alter_options = Vec::new();
+        while self
+            .peek_one_of_keywords(&[Keyword::ALGORITHM, Keyword::LOCK])
+            .is_some()
+        {
+            alter_options.push(self.parse_alter_table_operation()?)
+        }
+
+        Ok(CreateIndex {
+            name: index_name,
+            table_name,
+            using,
+            columns,
+            unique: false,
+            concurrently: false,
+            r#async: false,
+            if_not_exists: false,
+            include: vec![],
+            nulls_distinct: None,
+            with: vec![],
+            predicate: None,
+            index_options,
+            alter_options,
+            fulltext_or_spatial: Some(kind),
         })
     }
 

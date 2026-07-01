@@ -2854,13 +2854,45 @@ pub struct CreateIndex {
     ///
     /// [MySQL]: https://dev.mysql.com/doc/refman/8.4/en/create-index.html
     pub alter_options: Vec<AlterTableOperation>,
+    /// MySQL: when this index is a standalone `CREATE FULLTEXT INDEX` or
+    /// `CREATE SPATIAL INDEX`, records which kind. `None` means a plain
+    /// `CREATE INDEX` (or `CREATE UNIQUE INDEX` when `unique` is true).
+    ///
+    /// [MySQL]: https://dev.mysql.com/doc/refman/8.0/en/create-index.html
+    pub fulltext_or_spatial: Option<FullTextOrSpatialKind>,
+}
+
+/// MySQL: kind of a standalone `CREATE FULLTEXT INDEX` / `CREATE SPATIAL INDEX`.
+///
+/// See [`CreateIndex::fulltext_or_spatial`].
+#[derive(Debug, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, Copy)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "visitor", derive(Visit, VisitMut))]
+pub enum FullTextOrSpatialKind {
+    /// `CREATE FULLTEXT INDEX ...`
+    Fulltext,
+    /// `CREATE SPATIAL INDEX ...`
+    Spatial,
+}
+
+impl fmt::Display for FullTextOrSpatialKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            FullTextOrSpatialKind::Fulltext => f.write_str("FULLTEXT"),
+            FullTextOrSpatialKind::Spatial => f.write_str("SPATIAL"),
+        }
+    }
 }
 
 impl fmt::Display for CreateIndex {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let kind_prefix = match self.fulltext_or_spatial {
+            Some(kind) => format!("{kind} "),
+            None => String::new(),
+        };
         write!(
             f,
-            "CREATE {unique}INDEX {concurrently}{async_}{if_not_exists}",
+            "CREATE {kind_prefix}{unique}INDEX {concurrently}{async_}{if_not_exists}",
             unique = if self.unique { "UNIQUE " } else { "" },
             concurrently = if self.concurrently {
                 "CONCURRENTLY "

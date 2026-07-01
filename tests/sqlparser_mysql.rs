@@ -4728,6 +4728,31 @@ fn test_create_index_options() {
 }
 
 #[test]
+fn parse_create_fulltext_index() {
+    // Bare form (no USING, no options).
+    mysql_and_generic().verified_stmt("CREATE FULLTEXT INDEX ft_name ON t(c1)");
+    // Multiple columns.
+    mysql_and_generic().verified_stmt("CREATE FULLTEXT INDEX ft_name ON t(c1, c2)");
+    // No index name.
+    mysql_and_generic().verified_stmt("CREATE FULLTEXT INDEX ON t(c1)");
+    // With USING BTREE.
+    mysql_and_generic().verified_stmt("CREATE FULLTEXT INDEX ft_name ON t(c1) USING BTREE");
+    // With ALGORITHM/LOCK.
+    mysql_and_generic().verified_stmt(
+        "CREATE FULLTEXT INDEX ft_name ON t(c1, c2) ALGORITHM = INPLACE LOCK = SHARED",
+    );
+}
+
+#[test]
+fn parse_create_spatial_index() {
+    mysql_and_generic().verified_stmt("CREATE SPATIAL INDEX sp_idx ON t(geom)");
+    mysql_and_generic().verified_stmt("CREATE SPATIAL INDEX sp_idx ON t(geom, geom2)");
+    mysql_and_generic().verified_stmt("CREATE SPATIAL INDEX ON t(geom)");
+    mysql_and_generic()
+        .verified_stmt("CREATE SPATIAL INDEX sp_idx ON t(geom) ALGORITHM = INPLACE LOCK = SHARED");
+}
+
+#[test]
 fn test_optimizer_hints() {
     let mysql_dialect = mysql_and_generic();
 

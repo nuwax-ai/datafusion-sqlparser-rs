@@ -708,6 +708,7 @@ impl Spanned for CreateIndex {
             predicate,
             index_options: _,
             alter_options,
+            fulltext_or_spatial: _,
         } = self;
 
         union_spans(
