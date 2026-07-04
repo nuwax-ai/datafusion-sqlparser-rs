@@ -1159,6 +1159,7 @@ define_keywords!(
     VIEW,
     VIEWS,
     VIRTUAL,
+    VISIBLE,
     VOLATILE,
     VOLUME,
     WAITFOR,

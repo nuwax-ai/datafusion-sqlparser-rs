@@ -1473,6 +1473,13 @@ pub enum IndexOption {
     Using(IndexType),
     /// `COMMENT 'string'`: Specifies a comment for the index.
     Comment(String),
+    /// MySQL: `WITH PARSER parser_name`. Only meaningful for FULLTEXT indexes;
+    /// see <https://dev.mysql.com/doc/refman/8.0/en/create-index.html>.
+    WithParser(Ident),
+    /// MySQL: `VISIBLE`.
+    Visible,
+    /// MySQL: `INVISIBLE`.
+    Invisible,
 }
 
 impl fmt::Display for IndexOption {
@@ -1480,6 +1487,9 @@ impl fmt::Display for IndexOption {
         match self {
             Self::Using(index_type) => write!(f, "USING {index_type}"),
             Self::Comment(s) => write!(f, "COMMENT '{s}'"),
+            Self::WithParser(name) => write!(f, "WITH PARSER {name}"),
+            Self::Visible => write!(f, "VISIBLE"),
+            Self::Invisible => write!(f, "INVISIBLE"),
         }
     }
 }

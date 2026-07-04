@@ -4741,6 +4741,19 @@ fn parse_create_fulltext_index() {
     mysql_and_generic().verified_stmt(
         "CREATE FULLTEXT INDEX ft_name ON t(c1, c2) ALGORITHM = INPLACE LOCK = SHARED",
     );
+    // MySQL `WITH PARSER` (FULLTEXT-only; commonly ngram for CJK text).
+    mysql_and_generic().verified_stmt("CREATE FULLTEXT INDEX ft_name ON t(c1) WITH PARSER ngram");
+    // User's actual failing case from nuwax-cli diff-sql.
+    mysql_and_generic().verified_stmt(
+        "CREATE FULLTEXT INDEX ft_name_desc ON published(name, description) WITH PARSER ngram",
+    );
+    // Combined: USING BTREE + WITH PARSER + VISIBLE.
+    mysql_and_generic().verified_stmt(
+        "CREATE FULLTEXT INDEX ft_name ON t(c1, c2) USING BTREE WITH PARSER ngram VISIBLE",
+    );
+    // WITH PARSER + INVISIBLE.
+    mysql_and_generic()
+        .verified_stmt("CREATE FULLTEXT INDEX ft_name ON t(c1) WITH PARSER ngram INVISIBLE");
 }
 
 #[test]

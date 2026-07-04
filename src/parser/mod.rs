@@ -10507,6 +10507,14 @@ impl<'a> Parser<'a> {
         } else if self.parse_keyword(Keyword::COMMENT) {
             let s = self.parse_literal_string()?;
             Ok(Some(IndexOption::Comment(s)))
+        } else if self.parse_keywords(&[Keyword::WITH, Keyword::PARSER]) {
+            // MySQL: `WITH PARSER parser_name` (used by FULLTEXT indexes, e.g. ngram).
+            let name = self.parse_identifier()?;
+            Ok(Some(IndexOption::WithParser(name)))
+        } else if self.parse_keyword(Keyword::VISIBLE) {
+            Ok(Some(IndexOption::Visible))
+        } else if self.parse_keyword(Keyword::INVISIBLE) {
+            Ok(Some(IndexOption::Invisible))
         } else {
             Ok(None)
         }
