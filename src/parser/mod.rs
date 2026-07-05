@@ -10259,6 +10259,12 @@ impl<'a> Parser<'a> {
                 let opt_index_name = self.parse_optional_ident()?;
 
                 let columns = self.parse_parenthesized_index_column_list()?;
+                // MySQL index options (USING/COMMENT/WITH PARSER/VISIBLE/INVISIBLE).
+                // `SHOW CREATE TABLE` emits `WITH PARSER ngram` (wrapped in a
+                // `/*!50100 ... */` versioned comment that the tokenizer expands),
+                // so this must be consumed here or the surrounding CREATE TABLE
+                // loop rejects the leftover `WITH` token.
+                let index_options = self.parse_index_options()?;
 
                 Ok(Some(
                     FullTextOrSpatialConstraint {
@@ -10266,6 +10272,7 @@ impl<'a> Parser<'a> {
                         index_type_display,
                         opt_index_name,
                         columns,
+                        index_options,
                     }
                     .into(),
                 ))

@@ -3624,6 +3624,33 @@ fn parse_create_table_with_fulltext_definition() {
 
     mysql_and_generic()
         .verified_stmt("CREATE TABLE tb (c1 INT, c2 INT, FULLTEXT KEY potato (c1, c2))");
+
+    // MySQL FULLTEXT 索引选项 `WITH PARSER <name>`（如 ngram 用于中日韩分词）。
+    // 这是 CREATE TABLE 内联形式（区别于 standalone `CREATE FULLTEXT INDEX`）。
+    mysql_and_generic()
+        .verified_stmt("CREATE TABLE tb (id INT, FULLTEXT KEY ft (id) WITH PARSER ngram)");
+    mysql_and_generic().verified_stmt(
+        "CREATE TABLE tb (c1 INT, c2 INT, FULLTEXT KEY ft (c1, c2) WITH PARSER ngram VISIBLE)",
+    );
+}
+
+#[test]
+fn parse_create_table_fulltext_with_parser_versioned_comment() {
+    // 线上 `SHOW CREATE TABLE` 的真实输出：`WITH PARSER` 被包在 MySQL 版本注释
+    // `/*!50100 ... */` 中。tokenizer 会把版本注释展开为普通 token，因此解析后的
+    // AST 与无注释形式完全等价（这是 auto-upgrade-deploy live schema 的核心场景）。
+    let versioned =
+        "CREATE TABLE tb (id INT, FULLTEXT KEY ft (id) /*!50100 WITH PARSER ngram */)";
+    let plain = "CREATE TABLE tb (id INT, FULLTEXT KEY ft (id) WITH PARSER ngram)";
+    let stmts = mysql_and_generic()
+        .parse_sql_statements(versioned)
+        .expect("versioned-comment FULLTEXT must parse");
+    assert_eq!(stmts.len(), 1);
+    assert_eq!(
+        stmts[0].to_string(),
+        plain,
+        "expanded versioned comment should equal the plain form"
+    );
 }
 
 #[test]

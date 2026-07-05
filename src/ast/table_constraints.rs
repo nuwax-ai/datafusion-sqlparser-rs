@@ -328,6 +328,8 @@ pub struct FullTextOrSpatialConstraint {
     pub opt_index_name: Option<Ident>,
     /// Referred column identifier list.
     pub columns: Vec<IndexColumn>,
+    /// Optional index options such as `WITH PARSER`; see [`IndexOption`].
+    pub index_options: Vec<IndexOption>,
 }
 
 impl fmt::Display for FullTextOrSpatialConstraint {
@@ -345,6 +347,9 @@ impl fmt::Display for FullTextOrSpatialConstraint {
         }
 
         write!(f, " ({})", display_comma_separated(&self.columns))?;
+        if !self.index_options.is_empty() {
+            write!(f, " {}", display_separated(&self.index_options, " "))?;
+        }
 
         Ok(())
     }
